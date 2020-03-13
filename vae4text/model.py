@@ -76,10 +76,10 @@ class SentenceVAE(nn.Module):
         pre_z = to_var(torch.randn([batch_size, self.latent_size]))
         z = pre_z * std + mean
 
-        print("pre_z", pre_z)
-        print("z", z)
-        print("std", std)
-        print("mean", mean)
+        # print("pre_z", pre_z)
+        # print("z", z)
+        # print("std", std)
+        # print("mean", mean)
 
         # DECODER
         hidden = self.latent2hidden(z)

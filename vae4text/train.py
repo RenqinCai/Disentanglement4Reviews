@@ -15,6 +15,46 @@ from amazon import Amazon
 from utils import to_var, idx2word, expierment_name
 from model import SentenceVAE
 
+from nltk.tokenize import TweetTokenizer
+
+def f_raw2vec(tokenizer, raw_text, w2i, i2w):
+    words = tokenizer.tokenize(raw_text)
+    input_text = ['<sos>']+words+['<eos>']
+    input_text = [w2i.get(w, w2i['<unk>']) for w in input_text]
+    print("words", words)
+    return input_text
+
+def f_test_example(model, tokenizer, w2i, i2w):
+    raw_text = "since the wii wasn't being used much anymore in the living room , i thought i'd try to take it to the bedroom so i can watch hulu and stuff like that . this cable made it possible."
+    input_text = f_raw2vec(tokenizer, raw_text, w2i, i2w)
+    length_text = len(input_text)
+    length_text = [length_text]
+    print("length_text", length_text)
+
+    input_tensor = torch.LongTensor(input_text)
+    print('input_tensor', input_tensor)
+    input_tensor = input_tensor.unsqueeze(0)
+    if torch.is_tensor(input_tensor):
+        input_tensor = to_var(input_tensor)
+
+    length_tensor = torch.LongTensor(length_text)
+    print("length_tensor", length_tensor)
+    # length_tensor = length_tensor.unsqueeze(0)
+    if torch.is_tensor(length_tensor):
+        length_tensor = to_var(length_tensor)
+    
+    print("*"*10)
+    print("->"*10, *idx2word(input_tensor, i2w=i2w, pad_idx=w2i['<pad>']), sep='\n')
+    logp, mean, logv, z = model(input_tensor, length_tensor)
+    
+    mean = mean.unsqueeze(0)
+    # print("mean", mean)
+    # print("z", z)
+
+    samples, z = model.inference(z=mean)
+    print("<-"*10, *idx2word(samples, i2w=i2w, pad_idx=w2i['<pad>']), sep='\n')
+
+
 def main(args):
 
     ts = time.strftime('%Y-%b-%d-%H:%M:%S', time.gmtime())
@@ -63,6 +103,12 @@ def main(args):
 
     print(model)
 
+    tokenizer = TweetTokenizer(preserve_case=False)
+    vocab_file = "amazon.vocab.json"
+    with open(os.path.join(args.data_dir, vocab_file), 'r') as file:
+        vocab = json.load(file)
+        w2i, i2w = vocab['w2i'], vocab['i2w']
+
     if args.tensorboard_logging:
         writer = SummaryWriter(os.path.join(args.logdir, expierment_name(args,ts)))
         writer.add_text("model", str(model))
@@ -103,6 +149,8 @@ def main(args):
     step = 0
     for epoch in range(args.epochs):
         print("+"*20)
+
+        f_test_example(model, tokenizer, w2i, i2w)
         for split in splits:
 
             # data_loader = DataLoader(
