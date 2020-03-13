@@ -147,10 +147,13 @@ def main(args):
 
     tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.Tensor
     step = 0
+    save_mode = True
+    last_ELBO = 1e32
+    
     for epoch in range(args.epochs):
         print("+"*20)
 
-        f_test_example(model, tokenizer, w2i, i2w)
+        # f_test_example(model, tokenizer, w2i, i2w)
         for split in splits:
 
             # data_loader = DataLoader(
@@ -239,8 +242,16 @@ def main(args):
 
             print("%s Epoch %02d/%i, Mean ELBO %9.4f"%(split.upper(), epoch, args.epochs, torch.mean(tracker['ELBO'])))
 
+            cur_ELBO = torch.mean(tracker['ELBO'])
             if args.tensorboard_logging:
-                writer.add_scalar("%s-Epoch/ELBO"%split.upper(), torch.mean(tracker['ELBO']), epoch)
+                writer.add_scalar("%s-Epoch/ELBO"%split.upper(), cur_ELBO, epoch)
+
+            if split == "valid":
+                if cur_ELBO < last_ELBO:
+                    save_mode = True
+                else:
+                    save_mode = False
+                last_ELBO = cur_ELBO 
 
             # save a dump of all sentences and the encoded latent space
             # if split == 'valid':
@@ -254,8 +265,9 @@ def main(args):
             if split == 'train':
                 # checkpoint_path = os.path.join(save_model_path, "E%i.pytorch"%(epoch))
                 checkpoint_path = os.path.join(save_model_path, "best.pytorch")
-                torch.save(model.state_dict(), checkpoint_path)
-                print("Model saved at %s"%checkpoint_path)
+                if save_mode == True:
+                    torch.save(model.state_dict(), checkpoint_path)
+                    print("Model saved at %s"%checkpoint_path)
 
 
 if __name__ == '__main__':

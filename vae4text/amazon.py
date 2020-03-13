@@ -20,7 +20,7 @@ class Amazon(Dataset):
         self.data_dir = data_dir
         self.split = split
         self.max_sequence_length = kwargs.get('max_sequence_length', 50)
-        self.min_occ = kwargs.get('min_occ', 3)
+        self.min_occ = kwargs.get('min_occ', 5)
         self.batch_size = kwargs.get('batch_size', 32)
 
         self.raw_data_path = os.path.join(data_dir, split+'_df_review.pickle')
@@ -30,7 +30,7 @@ class Amazon(Dataset):
         if split == "train":
             self.max_line = 100000
         else:
-            self.max_line = 1000
+            self.max_line = 500
             print("max_line", self.max_line)
 
         if create_data:

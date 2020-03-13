@@ -78,9 +78,9 @@ def main(args):
 
 
     ### load vocab
-    with open(os.path.join(args.data_dir, args.vocab_file), 'r') as file:
-        vocab = json.load(file)
-        w2i, i2w = vocab['w2i'], vocab['i2w']
+    # with open(os.path.join(args.data_dir, args.vocab_file), 'r') as file:
+    #     vocab = json.load(file)
+    #     w2i, i2w = vocab['w2i'], vocab['i2w']
 
     tokenizer = TweetTokenizer(preserve_case=False)
 

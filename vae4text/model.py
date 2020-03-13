@@ -38,7 +38,7 @@ class SentenceVAE(nn.Module):
             raise ValueError()
 
         self.encoder_rnn = rnn(embedding_size, hidden_size, num_layers=num_layers, bidirectional=self.bidirectional, batch_first=True)
-        self.decoder_rnn = rnn(embedding_size, hidden_size, num_layers=num_layers, bidirectional=self.bidirectional, batch_first=True)
+        self.decoder_rnn = rnn(embedding_size+hidden_size, hidden_size, num_layers=num_layers, bidirectional=self.bidirectional, batch_first=True)
 
         self.hidden_factor = (2 if bidirectional else 1) * num_layers
 
@@ -100,7 +100,18 @@ class SentenceVAE(nn.Module):
             decoder_input_sequence = input_sequence.clone()
             decoder_input_sequence[prob < self.word_dropout_rate] = self.unk_idx
             input_embedding = self.embedding(decoder_input_sequence)
+        
         input_embedding = self.embedding_dropout(input_embedding)
+        
+        # print("embedding size", input_embedding.size())
+        # print("hidden size", hidden.size())
+        repeat_hidden = hidden.squeeze(0)
+        # .repeat(1, input_embedding.size()[1], 1)
+        # print("repeat_hidden size", repeat_hidden.size())
+        repeat_hidden = repeat_hidden.unsqueeze(1).repeat(1, input_embedding.size()[1], 1)
+        # print("repeat_hidden size", repeat_hidden.size())
+        input_embedding = torch.cat([input_embedding, repeat_hidden], dim=-1)
+        
         packed_input = rnn_utils.pack_padded_sequence(input_embedding, sorted_lengths.data.tolist(), batch_first=True)
 
         # decoder forward pass
@@ -146,6 +157,9 @@ class SentenceVAE(nn.Module):
         generations = self.tensor(batch_size, self.max_sequence_length).fill_(self.pad_idx).long()
 
         t=0
+
+        init_hidden = hidden
+
         while(t<self.max_sequence_length and len(running_seqs)>0):
 
             if t == 0:
@@ -154,6 +168,11 @@ class SentenceVAE(nn.Module):
             input_sequence = input_sequence.unsqueeze(1)
 
             input_embedding = self.embedding(input_sequence)
+
+            # print("input_embedding", input_embedding.size())
+            # print("init_hidden", init_hidden.size())
+            input_embedding = torch.cat([input_embedding, init_hidden], dim=-1)
+            # print("init_hidden", init_hidden)
 
             output, hidden = self.decoder_rnn(input_embedding, hidden)
 
